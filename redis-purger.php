@@ -69,13 +69,19 @@ namespace rtCamp\WP\Nginx {
 			}
 		}
 
-		function purgePost( $_ID )
+		function purgePost( $_ID, $purge_filter = NULL )
 		{
+			if (NULL==$purge_filter)
+			{
+				$purge_filter = current_filter();
+			}
 			global $rt_wp_nginx_helper, $blog_id;
 			if ( !$rt_wp_nginx_helper->options['enable_purge'] ) {
 				return;
 			}
-			switch ( current_filter() ) {
+			var_dump($rt_wp_nginx_helper);
+
+			switch ( $purge_filter ) {
 				case 'publish_post':
 					$this->log( "* * * * *" );
 					$this->log( "* Blog :: " . addslashes( get_bloginfo( 'name' ) ) . " ($blog_id)." );
@@ -223,6 +229,7 @@ namespace rtCamp\WP\Nginx {
 			$prefix = $rt_wp_nginx_helper->options['redis_prefix'];
 			
 			$_url_purge_base = $prefix . $parse['scheme'] . 'GET' . $parse['host'] . $parse['path'];
+			$this->log( "- Purged URL Base | " . $_url_purge_base );
 			
 			delete_single_key( $_url_purge_base );
         }
@@ -634,17 +641,21 @@ namespace rtCamp\WP\Nginx {
 			return true;
 		}
 
-		function purge_on_term_taxonomy_edited( $term_id, $tt_id, $taxon )
+		function purge_on_term_taxonomy_edited( $term_id, $taxon, $purge_filter = NULL )
 		{
+			if (NULL==$purge_filter)
+			{
+				$purge_filter = current_filter();
+			}
 
 			$this->log( __( "Term taxonomy edited or deleted", "nginx-helper" ) );
 
-			if ( current_filter() == 'edit_term' && $term = get_term( $term_id, $taxon ) ) {
-				$this->log( sprintf( __( "Term taxonomy '%s' edited, (tt_id '%d', term_id '%d', taxonomy '%s')", "nginx-helper" ), $term->name, $tt_id, $term_id, $taxon ) );
-			} else if ( current_filter() == 'delete_term' ) {
-				$this->log( sprintf( __( "A term taxonomy has been deleted from taxonomy '%s', (tt_id '%d', term_id '%d')", "nginx-helper" ), $taxon, $term_id, $tt_id ) );
+			if ( $purge_filter == 'edit_term' && $term = get_term( $term_id, $taxon ) ) {
+				$this->log( sprintf( __( "Term taxonomy '%s' edited, (term_id '%d', taxonomy '%s')", "nginx-helper" ), $term->name, $term_id, $taxon ) );
+			} else if ( $purge_filter == 'delete_term' ) {
+				$this->log( sprintf( __( "A term taxonomy has been deleted from taxonomy '%s', (term_id '%d')", "nginx-helper" ), $taxon, $term_id) );
 			}
-
+			$this->purgeUrl( get_term_link($term_id, $taxon) );
 			$this->_purge_homepage();
 
 			return true;
@@ -689,6 +700,28 @@ namespace rtCamp\WP\Nginx {
 			
 			$this->log( '* * * * *' );
 		}
+
+		function admin_purge_url($main_type, $sub_type,  $purge_id)
+		{
+			//wp_redirect( esc_url_raw( add_query_arg( array( 'nginx_helper_action' => $main_type ) ) ) );
+			
+			switch ($main_type)
+			{
+				case 'post':
+
+					$purge_filter = 'publish_'.$sub_type;
+					$this->purgePost($purge_id, $purge_filter );
+		
+
+					break;
+				case 'taxonomy':
+					$purge_filter = 'edit_term';
+					$this->purge_on_term_taxonomy_edited((int)$purge_id, $sub_type,'edit_term');
+					break;
+			}
+			return true;
+		}
+
 		
 		function purge_urls()
 		{
@@ -698,7 +731,7 @@ namespace rtCamp\WP\Nginx {
 			$host = $rt_wp_nginx_helper->options['redis_hostname'];
 			$prefix = $rt_wp_nginx_helper->options['redis_prefix'];
 			$_url_purge_base = $prefix . $parse['scheme'] . 'GET' . $parse['host'];
-			
+			$this->log( "- Purge URL Base | " . $_url_purge_base );
 			$purge_urls = isset( $rt_wp_nginx_helper->options['purge_url'] ) && ! empty( $rt_wp_nginx_helper->options['purge_url'] ) ?
 				explode( "\r\n", $rt_wp_nginx_helper->options['purge_url'] ) : array();
 			

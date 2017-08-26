@@ -69,6 +69,7 @@ namespace rtCamp\WP\Nginx {
 		if ( empty( $rt_wp_nginx_helper->options['cache_method'] ) ) {
 			$rt_wp_nginx_helper->options['cache_method'] = "enable_fastcgi";
 		}
+
 		/**
 		 * Show Update Message
 		 */
@@ -175,13 +176,13 @@ namespace rtCamp\WP\Nginx {
 								$redis_prefix = ( empty( $rt_wp_nginx_helper->options['redis_prefix'] ) ) ? 'nginx-cache:' : $rt_wp_nginx_helper->options['redis_prefix'];
 								?>
 								<tr>
-									<th><label for="redis_hostname"><?php _e( 'Hostname', 'nginx-helper' ); ?></label></th>
+									<th><label for="redis_hostname"><?php _e( 'Hostname (Separate Multiple Hosts Using Commas)', 'nginx-helper' ); ?></label></th>
 									<td>
 										<input id="redis_hostname" class="medium-text" type="text" name="redis_hostname" value="<?php echo $redis_hostname; ?>" />
 									</td>
 								</tr>
 								<tr>
-									<th><label for="redis_port"><?php _e( 'Port', 'nginx-helper' ); ?></label></th>
+									<th><label for="redis_port"><?php _e( 'Port (One for each host specified under Hostname) ', 'nginx-helper' ); ?></label></th>
 									<td>
 										<input id="redis_port" class="medium-text" type="text" name="redis_port" value="<?php echo $redis_port; ?>" />
 									</td>

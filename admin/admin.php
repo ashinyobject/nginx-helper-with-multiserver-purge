@@ -111,17 +111,9 @@ namespace rtCamp\WP\Nginx {
 
         function nginx_admin_page_init() {
             add_action( 'admin_enqueue_scripts', array( $this, 'nginx_admin_enqueue_assets' ), 999 );
-            add_action( 'admin_bar_menu', array( &$this, 'nginx_toolbar_purge_item' ), 100 );
         }
 
-        function nginx_toolbar_purge_item( $admin_bar ) {
-            if ( !current_user_can( 'manage_options' ) ) {
-                return;
-            }
-            $purge_url = add_query_arg( array( 'nginx_helper_action' => 'purge', 'nginx_helper_urls' => 'all' ) );
-            $nonced_url = wp_nonce_url( $purge_url, 'nginx_helper-purge_all' );
-            $admin_bar->add_menu( array( 'id' => 'nginx-helper-purge-all', 'title' => __( 'Purge Cache', 'nginx-helper' ), 'href' => $nonced_url, 'meta' => array( 'title' => __( 'Purge Cache', 'nginx-helper' ), ), ) );
-        }
+          
 
         function nginx_admin_enqueue_assets($hook) {
             if ( 'settings_page_nginx' != $hook ) {

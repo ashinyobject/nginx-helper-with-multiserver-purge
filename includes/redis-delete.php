@@ -5,18 +5,25 @@
 
 global $myredis, $rt_wp_nginx_helper, $redis_api, $lua, $rt_wp_nginx_purger;
 
-$host = $rt_wp_nginx_helper->options['redis_hostname'];
-$port = $rt_wp_nginx_helper->options['redis_port'];
+$hosts = $rt_wp_nginx_helper->options['redis_hostname'];
+$ports = $rt_wp_nginx_helper->options['redis_port'];
 $redis_api = '';
+$hosts = explode(',', $hosts);
+$ports = explode(',', $ports);
 
 if ( class_exists( 'Redis' ) ) { // Use PHP5-Redis if installed.
-    try {
-        $myredis = new Redis();
-        $myredis->connect( $host, $port, 5 );
-        $redis_api = 'php-redis';
-    } catch ( Exception $e ) { 
-        if( isset($rt_wp_nginx_purger) && !empty($rt_wp_nginx_purger) ) {
-            $rt_wp_nginx_purger->log( $e->getMessage(), 'ERROR' ); 
+    $index=0;
+    foreach($hosts as $host)
+    { 
+        try {
+            $port = $ports[$index];
+            $myredis[$index] = new Redis();
+            $myredis[$index++]->connect( $host, $port, 5 );
+            $redis_api = 'php-redis';
+        } catch ( Exception $e ) { 
+            if( isset($rt_wp_nginx_purger) && !empty($rt_wp_nginx_purger) ) {
+                $rt_wp_nginx_purger->log( $e->getMessage(), 'ERROR' ); 
+            }
         }
     }
 } else {
@@ -62,14 +69,17 @@ function delete_multi_keys( $key )
     
     try {
         if ( !empty( $myredis ) ) {
-            $matching_keys = $myredis->keys( $key );
-            if( $redis_api == 'predis') {
-                foreach ( $matching_keys as $key => $value ) {
-                    $myredis->executeRaw( ['DEL', $value ] );
+            foreach($myredis as $myredisinstance) {
+                $matching_keys = $myredisinstance->keys( $key );
+                if( $redis_api == 'predis') {
+                    foreach ( $matching_keys as $key => $value ) {
+                        $myredisinstance->executeRaw( ['DEL', $value ] );
+                    }
+                } else if( $redis_api == 'php-redis') {
+                    $myredisinstance->del( $matching_keys );
                 }
-            } else if( $redis_api == 'php-redis') {
-                return $myredis->del( $matching_keys );
             }
+            return true;
         } else {
             return false;
         }
@@ -85,7 +95,10 @@ function flush_entire_db()
 	global $myredis, $rt_wp_nginx_purger;
 	try {
         if ( !empty( $myredis ) ) {
-            return $myredis->flushdb();
+            foreach($myredis as $myredisinstance) {
+                $myredisinstance->flushdb();
+            }
+            return true;
         } else {
             return false;
         }
@@ -102,11 +115,15 @@ function delete_single_key( $key )
 	global $myredis, $redis_api, $rt_wp_nginx_purger;
     try {
         if ( !empty( $myredis ) ) {
-            if( $redis_api == 'predis') {
-                return $myredis->executeRaw( ['DEL', $key ] );
-            } else if( $redis_api == 'php-redis') {
-                return $myredis->del( $key );
+
+            foreach($myredis as $myredisinstance) {
+                if( $redis_api == 'predis') {
+                    return $myredisinstance->executeRaw( ['DEL', $key ] );
+                } else if( $redis_api == 'php-redis') {
+                    $myredisinstance->del( $key );
+                }
             }
+            return true;
         } else {
             return false;
         }
@@ -132,10 +149,13 @@ function delete_keys_by_wildcard( $pattern )
 	 */
     try {
         if ( ! empty( $myredis ) ) {
-            if( $redis_api == 'predis') {
-                return $myredis->eval( $lua, 1, $pattern );
-            } else if( $redis_api == 'php-redis') {
-                return $myredis->eval( $lua, array( $pattern ), 1 );
+            
+            foreach($myredis as $myredisinstance) {
+                if( $redis_api == 'predis') {
+                    $myredisinstance->eval( $lua, 1, $pattern );
+                } else if( $redis_api == 'php-redis') {
+                    $myredisinstance->eval( $lua, array( $pattern ), 1 );
+                }
             }
         } else {
             return false;

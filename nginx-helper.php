@@ -288,9 +288,10 @@ namespace rtCamp\WP\Nginx {
 
 		function purge_all()
 		{
-			if ( !isset( $_REQUEST['nginx_helper_action'] ) )
-				return;
 
+			if ( !isset( $_REQUEST['nginx_helper_action'] ) ) {
+				return;
+			}
 			if ( !current_user_can( 'manage_options' ) )
 				wp_die( 'Sorry, you do not have the necessary privileges to edit these options.' );
 
@@ -302,14 +303,30 @@ namespace rtCamp\WP\Nginx {
 				return;
 			}
 
-			check_admin_referer( 'nginx_helper-purge_all' );
+			
 
 			switch ( $action ) {
 				case 'purge':
+					check_admin_referer( 'nginx_helper-purge_all' );
 					$this->true_purge_all();
+					wp_redirect( esc_url_raw( add_query_arg( array( 'nginx_helper_action' => 'done' ) ) ) );
 					break;
+				case 'purge_url':
+					$main_type = $_REQUEST['nginx_main_type'];
+					$sub_type = $_REQUEST['nginx_sub_type'];
+					$purge_id = $_REQUEST['nginx_purge_id'];
+					$this->admin_purge_url($main_type, $sub_type, $purge_id);
+					wp_redirect( esc_url_raw( add_query_arg( array( 'nginx_helper_action' => 'done' ) ) ) );
+					break;
+				case 'purge_url_non_admin':
+					$main_type = $_REQUEST['nginx_main_type'];
+					$sub_type = $_REQUEST['nginx_sub_type'];
+					$purge_id = $_REQUEST['nginx_purge_id'];
+					$this->admin_purge_url($main_type, $sub_type, $purge_id);
+					wp_redirect( esc_url_raw( add_query_arg( array( 'nginx_helper_action' => 'done'),wp_get_referer() ) ));
+					break;
+
 			}
-			wp_redirect( esc_url_raw( add_query_arg( array( 'nginx_helper_action' => 'done' ) ) ) );
 		}
 
 		function true_purge_all()
@@ -317,6 +334,16 @@ namespace rtCamp\WP\Nginx {
 			global $rt_wp_nginx_purger;
 			$rt_wp_nginx_purger->true_purge_all();
 		}
+
+		function admin_purge_url($main_type, $sub_type, $purge_id)
+		{
+			global $rt_wp_nginx_purger;
+			$rt_wp_nginx_purger->admin_purge_url($main_type, $sub_type, $purge_id);
+			wp_redirect( esc_url_raw( add_query_arg( array( 'nginx_helper_action' => 'done' ) ) ) );
+			//wp_redirect( esc_url_raw( add_query_arg( array( 'nginx_helper_action' => $main_type ) ) ) );
+		}
+
+
 
 		/**
 		 * Load the translation file for current language.
@@ -341,7 +368,9 @@ namespace {
 		require_once (rtCamp\WP\Nginx\RT_WP_NGINX_HELPER_PATH . '/admin/admin.php');
 		$rtwpAdminPanel = new \rtCamp\WP\Nginx\Admin();
 	}
-
+	
+	require_once (rtCamp\WP\Nginx\RT_WP_NGINX_HELPER_PATH . '/admin/admin-bar.php');
+	$rtwpAdminBar = new \rtCamp\WP\Nginx\AdminBar();
 	require_once (rtCamp\WP\Nginx\RT_WP_NGINX_HELPER_PATH . 'purger.php');
 	require_once (rtCamp\WP\Nginx\RT_WP_NGINX_HELPER_PATH . 'redis-purger.php');
 	require_once (rtCamp\WP\Nginx\RT_WP_NGINX_HELPER_PATH . 'compatibility.php');
