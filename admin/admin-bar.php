@@ -1,5 +1,5 @@
 <?php
-
+// New File
 namespace rtCamp\WP\Nginx {
 
     class AdminBar {
