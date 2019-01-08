@@ -144,6 +144,12 @@ namespace rtCamp\WP\Nginx {
 				}
 
 				$this->purgeUrl( get_permalink( $_post_ID ) );
+				
+				$this->log( "Purging AMP $_post_type (id $_post_ID, blog id $blog_id)" );
+				if (function_exists('amp_get_permalink'))  
+				{ 
+					$this->purgeUrl( amp_get_permalink( $_post_ID ) );
+				}  
 			}
 
 			if ( $_purge_archive ) {
@@ -521,6 +527,11 @@ namespace rtCamp\WP\Nginx {
 				foreach ( $_posts as $p ) {
 					$this->log( sprintf( "+ " . __( "Purging post id '%d' (post type '%s')", "nginx-helper" ), $p->ID, $p->post_type ) );
 					$this->purgeUrl( get_permalink( $p->ID ) );
+					$this->log( "Purging AMP #2 $_post_type (id $_post_ID, blog id $blog_id)" );
+					if (function_exists('amp_get_permalink'))  
+					{ 
+						$this->purgeUrl( amp_get_permalink( $p->ID ) );
+					}  
 				}
 			} else {
 				$this->log( "- " . __( "No posts", "nginx-helper" ) );

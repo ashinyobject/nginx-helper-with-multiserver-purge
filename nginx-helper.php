@@ -26,12 +26,16 @@ namespace rtCamp\WP\Nginx {
 		function __construct()
 		{
 
+
 			if ( !$this->required_wp_version() )
 				if ( !$this->required_php_version() )
 					return;
 
+			
 			// Load Plugin Text Domain
 			add_action( 'init', array( $this, 'load_plugin_textdomain' ) );
+
+			add_filter( 'site_transient_update_plugins', array( $this, 'remove_update_notification') );
 
 			$this->load_options();
 			$this->plugin_name = plugin_basename( __FILE__ );
@@ -351,6 +355,11 @@ namespace rtCamp\WP\Nginx {
 		function load_plugin_textdomain()
 		{
 			load_plugin_textdomain( 'nginx-helper', false, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
+		}
+
+		function remove_update_notification( $value ) {
+			unset($value->response[ plugin_basename(__FILE__) ]); 
+			return $value;
 		}
 
 	}
